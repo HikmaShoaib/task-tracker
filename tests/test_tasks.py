@@ -13,7 +13,7 @@ def test_create_task_valid_returns_201_with_full_body(client):
         },
     )
 
-    assert response.status_code == 999
+    assert response.status_code == 201
     body = response.json()
     assert body["title"] == "Write tests"
     assert body["description"] == "Cover module 2 endpoints"
