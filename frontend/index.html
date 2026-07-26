@@ -1,0 +1,864 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Task Tracker Kanban</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f4f7fb;
+      --panel: #ffffff;
+      --border: #d9e2ec;
+      --text: #233143;
+      --muted: #6b7a90;
+      --todo: #e9f2ff;
+      --inprogress: #fff4da;
+      --done: #eaf8ee;
+      --accent: #2563eb;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    .page {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+
+    .header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .header h1 {
+      margin: 0 0 8px;
+      font-size: 2rem;
+    }
+
+    .header p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 1rem;
+    }
+
+    .new-task-button {
+      border: 0;
+      border-radius: 8px;
+      padding: 10px 16px;
+      background: var(--accent);
+      color: #fff;
+      cursor: pointer;
+      font-size: 0.95rem;
+      white-space: nowrap;
+    }
+
+    .new-task-button:hover {
+      opacity: 0.9;
+    }
+
+    .board-state {
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 16px;
+      padding: 12px 14px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: #fff;
+      color: var(--text);
+    }
+
+    .board-state.is-visible {
+      display: flex;
+    }
+
+    .board-state.loading {
+      background: #eff6ff;
+      border-color: #bfdbfe;
+      color: #1d4ed8;
+    }
+
+    .board-state.error {
+      background: #fef2f2;
+      border-color: #fecaca;
+      color: #991b1b;
+    }
+
+    .retry-button {
+      border: 0;
+      border-radius: 8px;
+      padding: 8px 10px;
+      background: var(--accent);
+      color: #fff;
+      cursor: pointer;
+      font-size: 0.9rem;
+    }
+
+    .retry-button:hover {
+      opacity: 0.9;
+    }
+
+    .empty-placeholder {
+      margin: 0;
+      padding: 12px 0;
+      color: var(--muted);
+      font-size: 0.92rem;
+      text-align: center;
+    }
+
+    .kanban-board {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    .kanban-column {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+      min-height: 320px;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+      transition: outline 0.1s ease;
+    }
+
+    .kanban-column[data-status="ToDo"] {
+      background: var(--todo);
+    }
+
+    .kanban-column[data-status="InProgress"] {
+      background: var(--inprogress);
+    }
+
+    .kanban-column[data-status="Done"] {
+      background: var(--done);
+    }
+
+    .kanban-column.drag-over {
+      outline: 2px dashed var(--accent);
+      outline-offset: -4px;
+    }
+
+    .column-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+      font-weight: 700;
+      font-size: 1rem;
+    }
+
+    .column-title span:last-child {
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .task-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      min-height: 40px;
+    }
+
+    .task-card {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px;
+      cursor: grab;
+    }
+
+    .task-card.dragging {
+      opacity: 0.5;
+    }
+
+    .task-card h3 {
+      margin: 0 0 8px;
+      font-size: 1rem;
+    }
+
+    .task-description {
+      margin: 0 0 10px;
+      color: var(--muted);
+      font-size: 0.92rem;
+      line-height: 1.4;
+    }
+
+    .task-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 12px;
+      font-size: 0.86rem;
+      color: var(--muted);
+    }
+
+    .pill {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 999px;
+      background: #f4f7fb;
+      border: 1px solid var(--border);
+    }
+
+    .pill.high {
+      background: #fde2e2;
+      border-color: #f5b5b5;
+      color: #9c2b2b;
+    }
+
+    .pill.medium {
+      background: #fdf0d5;
+      border-color: #f0d9a8;
+      color: #92661a;
+    }
+
+    .pill.low {
+      background: #e3f3e6;
+      border-color: #b9e0c1;
+      color: #256b34;
+    }
+
+    .edit-button {
+      border: 0;
+      border-radius: 8px;
+      padding: 8px 10px;
+      background: var(--accent);
+      color: #fff;
+      cursor: pointer;
+      font-size: 0.9rem;
+    }
+
+    .edit-button:hover {
+      opacity: 0.9;
+    }
+
+    @media (max-width: 800px) {
+      .kanban-board {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Modal styles */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.45);
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      z-index: 50;
+    }
+
+    .modal-overlay.is-open {
+      display: flex;
+    }
+
+    .modal-dialog {
+      background: #fff;
+      border-radius: 12px;
+      width: 100%;
+      max-width: 460px;
+      max-height: 90vh;
+      overflow-y: auto;
+      padding: 20px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    }
+
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+
+    .modal-header h2 {
+      margin: 0;
+      font-size: 1.2rem;
+    }
+
+    .modal-close-button {
+      border: 0;
+      background: transparent;
+      font-size: 1.3rem;
+      line-height: 1;
+      cursor: pointer;
+      color: var(--muted);
+      padding: 4px;
+    }
+
+    .modal-close-button:hover {
+      color: var(--text);
+    }
+
+    .modal-form-group {
+      margin-bottom: 14px;
+    }
+
+    .modal-form-group label {
+      display: block;
+      font-size: 0.88rem;
+      font-weight: 600;
+      margin-bottom: 4px;
+      color: var(--text);
+    }
+
+    .modal-form-group input,
+    .modal-form-group textarea,
+    .modal-form-group select {
+      width: 100%;
+      padding: 8px 10px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      font-size: 0.92rem;
+      font-family: inherit;
+    }
+
+    .modal-form-group textarea {
+      resize: vertical;
+      min-height: 60px;
+    }
+
+    .modal-field-error {
+      color: #991b1b;
+      font-size: 0.82rem;
+      margin-top: 4px;
+      display: none;
+    }
+
+    .modal-field-error.is-visible {
+      display: block;
+    }
+
+    .modal-banner {
+      display: none;
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      color: #991b1b;
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-size: 0.88rem;
+      margin-bottom: 14px;
+    }
+
+    .modal-banner.is-visible {
+      display: block;
+    }
+
+    .modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-top: 8px;
+    }
+
+    .modal-button {
+      border: 0;
+      border-radius: 8px;
+      padding: 8px 14px;
+      font-size: 0.92rem;
+      cursor: pointer;
+    }
+
+    .modal-button.cancel {
+      background: #eef1f5;
+      color: var(--text);
+    }
+
+    .modal-button.save {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    .modal-button:hover {
+      opacity: 0.9;
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header class="header">
+      <div>
+        <h1>Task Tracker</h1>
+        <p>Keep work moving across the board.</p>
+      </div>
+      <button type="button" class="new-task-button" id="new-task-button">New Task</button>
+    </header>
+
+    <main class="kanban-board">
+      <section class="kanban-column" data-status="ToDo">
+        <div class="column-title">
+          <span>To Do</span>
+          <span>1</span>
+        </div>
+        <div class="task-list" id="todo-list"></div>
+      </section>
+
+      <section class="kanban-column" data-status="InProgress">
+        <div class="column-title">
+          <span>In Progress</span>
+          <span>1</span>
+        </div>
+        <div class="task-list" id="inprogress-list"></div>
+      </section>
+
+      <section class="kanban-column" data-status="Done">
+        <div class="column-title">
+          <span>Done</span>
+          <span>1</span>
+        </div>
+        <div class="task-list" id="done-list"></div>
+      </section>
+    </main>
+  </div>
+
+  <div class="modal-overlay" id="modal-overlay">
+    <div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+      <div class="modal-header">
+        <h2 id="modal-title">New Task</h2>
+        <button type="button" class="modal-close-button" id="modal-close-button" aria-label="Close">&times;</button>
+      </div>
+
+      <div class="modal-banner" id="modal-banner"></div>
+
+      <form id="task-form">
+        <input type="hidden" id="task-id" value="" />
+
+        <div class="modal-form-group">
+          <label for="task-title">Title</label>
+          <input type="text" id="task-title" name="title" />
+          <div class="modal-field-error" id="title-error">Title is required</div>
+        </div>
+
+        <div class="modal-form-group">
+          <label for="task-description">Description</label>
+          <textarea id="task-description" name="description"></textarea>
+        </div>
+
+        <div class="modal-form-group">
+          <label for="task-status">Status</label>
+          <select id="task-status" name="status">
+            <option value="ToDo">To Do</option>
+            <option value="InProgress">In Progress</option>
+            <option value="Done">Done</option>
+          </select>
+        </div>
+
+        <div class="modal-form-group">
+          <label for="task-priority">Priority</label>
+          <select id="task-priority" name="priority">
+            <option value="High">High</option>
+            <option value="Medium">Medium</option>
+            <option value="Low">Low</option>
+          </select>
+        </div>
+
+        <div class="modal-form-group">
+          <label for="task-assignee">Assignee</label>
+          <input type="text" id="task-assignee" name="assignee" />
+        </div>
+
+        <div class="modal-actions">
+          <button type="button" class="modal-button cancel" id="modal-cancel-button">Cancel</button>
+          <button type="submit" class="modal-button save" id="modal-save-button">Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    const BASE_URL = "http://localhost:8000";
+    const STATUS_ORDER = ["ToDo", "InProgress", "Done"];
+    const PRIORITY_ORDER = {
+      high: 0,
+      medium: 1,
+      low: 2
+    };
+    let tasks = [];
+
+    const listByStatus = {
+      ToDo: document.getElementById("todo-list"),
+      InProgress: document.getElementById("inprogress-list"),
+      Done: document.getElementById("done-list")
+    };
+    const columnByStatus = {
+      ToDo: document.querySelector('.kanban-column[data-status="ToDo"]'),
+      InProgress: document.querySelector('.kanban-column[data-status="InProgress"]'),
+      Done: document.querySelector('.kanban-column[data-status="Done"]')
+    };
+    const countByStatus = {
+      ToDo: document.querySelector('.kanban-column[data-status="ToDo"] .column-title span:last-child'),
+      InProgress: document.querySelector('.kanban-column[data-status="InProgress"] .column-title span:last-child'),
+      Done: document.querySelector('.kanban-column[data-status="Done"] .column-title span:last-child')
+    };
+
+    const boardState = document.createElement("div");
+    boardState.id = "board-state";
+    boardState.className = "board-state";
+    boardState.setAttribute("role", "status");
+    boardState.setAttribute("aria-live", "polite");
+    const boardContainer = document.querySelector(".kanban-board");
+    if (boardContainer && boardContainer.parentNode) {
+      boardContainer.parentNode.insertBefore(boardState, boardContainer);
+    }
+
+    // Modal elements
+    const modalOverlay = document.getElementById("modal-overlay");
+    const modalTitle = document.getElementById("modal-title");
+    const modalBanner = document.getElementById("modal-banner");
+    const modalCloseButton = document.getElementById("modal-close-button");
+    const modalCancelButton = document.getElementById("modal-cancel-button");
+    const taskForm = document.getElementById("task-form");
+    const taskIdField = document.getElementById("task-id");
+    const titleField = document.getElementById("task-title");
+    const titleError = document.getElementById("title-error");
+    const descriptionField = document.getElementById("task-description");
+    const statusField = document.getElementById("task-status");
+    const priorityField = document.getElementById("task-priority");
+    const assigneeField = document.getElementById("task-assignee");
+    const newTaskButton = document.getElementById("new-task-button");
+
+    function escapeHtml(value) {
+      return String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+    }
+
+    function getPriorityValue(priority) {
+      const normalized = String(priority ?? "").toLowerCase();
+      return PRIORITY_ORDER[normalized] ?? Number.MAX_SAFE_INTEGER;
+    }
+
+    function sortTasks(taskList) {
+      return [...taskList].sort((a, b) => {
+        const priorityDiff = getPriorityValue(a.priority) - getPriorityValue(b.priority);
+        if (priorityDiff !== 0) {
+          return priorityDiff;
+        }
+        return (a.id ?? 0) - (b.id ?? 0);
+      });
+    }
+
+    function setBoardState(kind, message) {
+      boardState.className = `board-state${kind ? ` ${kind}` : ""}`;
+      boardState.innerHTML = "";
+
+      if (!kind) {
+        boardState.classList.remove("is-visible");
+        return;
+      }
+
+      boardState.classList.add("is-visible");
+      if (kind === "error") {
+        const messageText = document.createElement("span");
+        messageText.textContent = message;
+        const retryButton = document.createElement("button");
+        retryButton.type = "button";
+        retryButton.className = "retry-button";
+        retryButton.textContent = "Retry";
+        retryButton.addEventListener("click", () => fetchTasks());
+        boardState.appendChild(messageText);
+        boardState.appendChild(retryButton);
+        return;
+      }
+
+      boardState.textContent = message;
+    }
+
+    function updateColumnCounts(taskList) {
+      STATUS_ORDER.forEach((status) => {
+        const countElement = countByStatus[status];
+        if (!countElement) return;
+        const count = taskList.filter((task) => task.status === status).length;
+        countElement.textContent = String(count);
+      });
+    }
+
+    async function getErrorDetail(response) {
+      let detailMessage = `Request failed with status ${response.status}`;
+      try {
+        const errorBody = await response.json();
+        if (errorBody && errorBody.detail) {
+          detailMessage = typeof errorBody.detail === "string"
+            ? errorBody.detail
+            : JSON.stringify(errorBody.detail);
+        }
+      } catch (parseError) {
+        // ignore parse failure, use default message
+      }
+      return detailMessage;
+    }
+
+    function handleDragStart(event) {
+      const taskId = event.currentTarget.dataset.taskId;
+      event.dataTransfer.setData("text/plain", taskId);
+      event.dataTransfer.effectAllowed = "move";
+      event.currentTarget.classList.add("dragging");
+    }
+
+    function handleDragEnd(event) {
+      event.currentTarget.classList.remove("dragging");
+    }
+
+    function openModalForCreate() {
+      modalTitle.textContent = "New Task";
+      taskIdField.value = "";
+      titleField.value = "";
+      descriptionField.value = "";
+      statusField.value = "ToDo";
+      priorityField.value = "Medium";
+      assigneeField.value = "";
+      clearModalErrors();
+      modalOverlay.classList.add("is-open");
+      titleField.focus();
+    }
+
+    function openModalForEdit(task) {
+      modalTitle.textContent = "Edit Task";
+      taskIdField.value = task.id;
+      titleField.value = task.title || "";
+      descriptionField.value = task.description || "";
+      statusField.value = task.status || "ToDo";
+      priorityField.value = task.priority || "Medium";
+      assigneeField.value = task.assignee || "";
+      clearModalErrors();
+      modalOverlay.classList.add("is-open");
+      titleField.focus();
+    }
+
+    function closeModal() {
+      modalOverlay.classList.remove("is-open");
+      clearModalErrors();
+    }
+
+    function clearModalErrors() {
+      titleError.classList.remove("is-visible");
+      modalBanner.classList.remove("is-visible");
+      modalBanner.textContent = "";
+    }
+
+    function showModalBanner(message) {
+      modalBanner.textContent = message;
+      modalBanner.classList.add("is-visible");
+    }
+
+    modalCloseButton.addEventListener("click", closeModal);
+    modalCancelButton.addEventListener("click", closeModal);
+    modalOverlay.addEventListener("click", (event) => {
+      if (event.target === modalOverlay) {
+        closeModal();
+      }
+    });
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && modalOverlay.classList.contains("is-open")) {
+        closeModal();
+      }
+    });
+    newTaskButton.addEventListener("click", openModalForCreate);
+
+    taskForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      clearModalErrors();
+
+      const trimmedTitle = titleField.value.trim();
+      if (!trimmedTitle) {
+        titleError.classList.add("is-visible");
+        return;
+      }
+
+      const existingId = taskIdField.value;
+      const isEdit = Boolean(existingId);
+      const url = isEdit ? `${BASE_URL}/tasks/${existingId}` : `${BASE_URL}/tasks`;
+      const method = isEdit ? "PATCH" : "POST";
+
+      const payload = {
+        title: trimmedTitle,
+        description: descriptionField.value.trim() === "" ? "" : descriptionField.value,
+        priority: priorityField.value,
+        assignee: assigneeField.value.trim() === "" ? null : assigneeField.value.trim()
+      };
+
+      if (isEdit) {
+        const originalTask = tasks.find((t) => String(t.id) === String(existingId));
+        const originalStatus = originalTask ? originalTask.status : null;
+        if (statusField.value !== originalStatus) {
+          payload.status = statusField.value;
+        }
+      } else {
+        payload.status = statusField.value;
+      }
+
+      try {
+        const response = await fetch(url, {
+          method,
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+          const detailMessage = await getErrorDetail(response);
+          showModalBanner(detailMessage);
+          return;
+        }
+
+        closeModal();
+        await fetchTasks();
+      } catch (error) {
+        console.error("Failed to save task:", error);
+        showModalBanner("Network error. The task was not saved.");
+      }
+    });
+
+    function renderBoard(taskList) {
+      Object.values(listByStatus).forEach((list) => {
+        if (list) {
+          list.innerHTML = "";
+        }
+      });
+      updateColumnCounts(taskList);
+
+      const grouped = STATUS_ORDER.reduce((acc, status) => {
+        acc[status] = taskList.filter((task) => task.status === status);
+        return acc;
+      }, {});
+
+      STATUS_ORDER.forEach((status) => {
+        const list = listByStatus[status];
+        if (!list) return;
+        const columnTasks = sortTasks(grouped[status]);
+
+        if (columnTasks.length === 0) {
+          const emptyState = document.createElement("p");
+          emptyState.className = "empty-placeholder";
+          emptyState.textContent = "No tasks yet";
+          list.appendChild(emptyState);
+          return;
+        }
+
+        columnTasks.forEach((task) => {
+          const card = document.createElement("article");
+          card.className = "task-card";
+          card.draggable = true;
+          card.dataset.taskId = task.id;
+          const description = task.description
+            ? `<p class="task-description">${escapeHtml(task.description)}</p>`
+            : "";
+          const assignee = task.assignee || "Unassigned";
+          const priorityClass = String(task.priority || "").toLowerCase();
+          card.innerHTML = `
+            <h3>${escapeHtml(task.title)}</h3>
+            ${description}
+            <div class="task-meta">
+              <span class="pill ${priorityClass}">Priority: ${escapeHtml(task.priority || "")}</span>
+              <span class="pill">Assignee: ${escapeHtml(assignee)}</span>
+            </div>
+            <button type="button" class="edit-button">Edit</button>
+          `;
+          card.addEventListener("dragstart", handleDragStart);
+          card.addEventListener("dragend", handleDragEnd);
+          const editButton = card.querySelector(".edit-button");
+          editButton.addEventListener("click", () => openModalForEdit(task));
+          list.appendChild(card);
+        });
+      });
+    }
+
+    async function fetchTasks() {
+      setBoardState("loading", "Loading tasks...");
+      try {
+        const response = await fetch(`${BASE_URL}/tasks`);
+        if (!response.ok) {
+          throw new Error(`Request failed with status ${response.status}`);
+        }
+        const data = await response.json();
+        tasks = Array.isArray(data) ? data : [];
+        renderBoard(tasks);
+        setBoardState();
+        return tasks;
+      } catch (error) {
+        console.error("Failed to load tasks:", error);
+        tasks = [];
+        renderBoard(tasks);
+        setBoardState("error", "Unable to load tasks. Please try again.");
+        return tasks;
+      }
+    }
+
+    async function updateTaskStatus(taskId, targetStatus) {
+      const task = tasks.find((t) => String(t.id) === String(taskId));
+      if (!task) return;
+      const previousStatus = task.status;
+      if (previousStatus === targetStatus) return;
+
+      task.status = targetStatus;
+      renderBoard(tasks);
+
+      try {
+        const response = await fetch(`${BASE_URL}/tasks/${taskId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ status: targetStatus })
+        });
+
+        if (!response.ok) {
+          const detailMessage = await getErrorDetail(response);
+          task.status = previousStatus;
+          renderBoard(tasks);
+          setBoardState("error", detailMessage);
+          return;
+        }
+
+        setBoardState();
+      } catch (error) {
+        console.error("Failed to update task status:", error);
+        task.status = previousStatus;
+        renderBoard(tasks);
+        setBoardState("error", "Network error. Task move was not saved.");
+      }
+    }
+
+    STATUS_ORDER.forEach((status) => {
+      const column = columnByStatus[status];
+      if (!column) return;
+
+      column.addEventListener("dragover", (event) => {
+        event.preventDefault();
+        event.dataTransfer.dropEffect = "move";
+        column.classList.add("drag-over");
+      });
+
+      column.addEventListener("dragleave", () => {
+        column.classList.remove("drag-over");
+      });
+
+      column.addEventListener("drop", (event) => {
+        event.preventDefault();
+        column.classList.remove("drag-over");
+        const taskId = event.dataTransfer.getData("text/plain");
+        if (!taskId) return;
+        updateTaskStatus(taskId, status);
+      });
+    });
+
+    fetchTasks();
+  </script>
+</body>
+</html>
