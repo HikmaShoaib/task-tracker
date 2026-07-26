@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, date
 from enum import Enum
 from typing import Optional
 
@@ -25,6 +25,8 @@ class TaskCreate(BaseModel):
     status: TaskStatus = TaskStatus.TODO
     priority: TaskPriority = TaskPriority.MEDIUM
     assignee: Optional[str] = None
+    tags: list[str] = []
+    due_date: Optional[date] = None
 
     @field_validator("title", mode="before")
     @classmethod
@@ -50,6 +52,8 @@ class TaskUpdate(BaseModel):
     status: Optional[TaskStatus] = None
     priority: Optional[TaskPriority] = None
     assignee: Optional[str] = None
+    tags: Optional[list[str]] = None
+    due_date: Optional[date] = None
 
     @field_validator("title", mode="before")
     @classmethod
@@ -76,5 +80,8 @@ class TaskResponse(BaseModel):
     status: TaskStatus
     priority: TaskPriority
     assignee: Optional[str]
+    tags: list[str] = []
+    due_date: Optional[date] = None
+    is_overdue: bool = False
     created_at: datetime
     updated_at: datetime

@@ -468,9 +468,19 @@
           </select>
         </div>
 
-        <div class="modal-form-group">
+      <div class="modal-form-group">
           <label for="task-assignee">Assignee</label>
           <input type="text" id="task-assignee" name="assignee" />
+        </div>
+
+        <div class="modal-form-group">
+          <label for="task-tags">Tags (comma-separated)</label>
+          <input type="text" id="task-tags" name="tags" placeholder="e.g. urgent, work" />
+        </div>
+
+        <div class="modal-form-group">
+          <label for="task-due-date">Due Date</label>
+          <input type="date" id="task-due-date" name="due_date" />
         </div>
 
         <div class="modal-actions">
@@ -531,6 +541,8 @@
     const statusField = document.getElementById("task-status");
     const priorityField = document.getElementById("task-priority");
     const assigneeField = document.getElementById("task-assignee");
+    const tagsField = document.getElementById("task-tags");
+    const dueDateField = document.getElementById("task-due-date");
     const newTaskButton = document.getElementById("new-task-button");
 
     function escapeHtml(value) {
@@ -626,6 +638,8 @@
       statusField.value = "ToDo";
       priorityField.value = "Medium";
       assigneeField.value = "";
+      tagsField.value = "";
+      dueDateField.value = "";
       clearModalErrors();
       modalOverlay.classList.add("is-open");
       titleField.focus();
@@ -639,6 +653,8 @@
       statusField.value = task.status || "ToDo";
       priorityField.value = task.priority || "Medium";
       assigneeField.value = task.assignee || "";
+      tagsField.value = Array.isArray(task.tags) ? task.tags.join(", ") : "";
+      dueDateField.value = task.due_date || "";
       clearModalErrors();
       modalOverlay.classList.add("is-open");
       titleField.focus();
@@ -689,11 +705,18 @@
       const url = isEdit ? `${BASE_URL}/tasks/${existingId}` : `${BASE_URL}/tasks`;
       const method = isEdit ? "PATCH" : "POST";
 
+      const parsedTags = tagsField.value
+        .split(",")
+        .map((tag) => tag.trim())
+        .filter((tag) => tag.length > 0);
+
       const payload = {
         title: trimmedTitle,
         description: descriptionField.value.trim() === "" ? "" : descriptionField.value,
         priority: priorityField.value,
-        assignee: assigneeField.value.trim() === "" ? null : assigneeField.value.trim()
+        assignee: assigneeField.value.trim() === "" ? null : assigneeField.value.trim(),
+        tags: parsedTags,
+        due_date: dueDateField.value === "" ? null : dueDateField.value
       };
 
       if (isEdit) {
@@ -763,12 +786,20 @@
             : "";
           const assignee = task.assignee || "Unassigned";
           const priorityClass = String(task.priority || "").toLowerCase();
+          const tagsHtml = Array.isArray(task.tags) && task.tags.length > 0
+            ? task.tags.map((tag) => `<span class="pill">#${escapeHtml(tag)}</span>`).join("")
+            : "";
+          const dueDateHtml = task.due_date
+            ? `<span class="pill ${task.is_overdue ? "high" : ""}">${task.is_overdue ? "Overdue: " : "Due: "}${escapeHtml(task.due_date)}</span>`
+            : "";
           card.innerHTML = `
             <h3>${escapeHtml(task.title)}</h3>
             ${description}
             <div class="task-meta">
               <span class="pill ${priorityClass}">Priority: ${escapeHtml(task.priority || "")}</span>
               <span class="pill">Assignee: ${escapeHtml(assignee)}</span>
+              ${dueDateHtml}
+              ${tagsHtml}
             </div>
             <button type="button" class="edit-button">Edit</button>
           `;
