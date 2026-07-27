@@ -133,6 +133,18 @@ def test_patch_same_status_returns_422(client, created_task):
     assert response.status_code == 422
 
 
+# Known limitation (see README "Project conventions and current limitations"):
+# TaskUpdate.validate_title does not reject an explicit `title: null`, and
+# storage.update_task applies it via model_copy(update=...), which bypasses
+# validation. This test pins today's actual (buggy) behavior, not desired
+# behavior — it should be updated if the underlying bug is ever fixed.
+def test_patch_title_null_is_accepted_and_returns_null_title(client, created_task):
+    response = client.patch(f"/tasks/{created_task['id']}", json={"title": None})
+
+    assert response.status_code == 200
+    assert response.json()["title"] is None
+
+
 def test_delete_existing_returns_204_no_body(client, created_task):
     response = client.delete(f"/tasks/{created_task['id']}")
 

@@ -1,7 +1,7 @@
-"""Task Tracker API - Module 1 skeleton.
+"""Task Tracker API - Module 1-4 learning project.
 
-Creates the FastAPI application instance and exposes GET /health.
-CRUD endpoints will be added in later steps.
+Creates the FastAPI application instance and exposes a full CRUD API for
+tasks (create, list/filter, get, update, delete) plus GET /health.
 """
 
 import os
@@ -19,7 +19,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI(
     title="Task Tracker API",
-    description="Module 1 learning project: a simple task tracker REST API.",
+    description="Module 1-4 learning project: a task tracker REST API with full CRUD for tasks.",
     version="0.1.0",
 )
 app.add_middleware(
