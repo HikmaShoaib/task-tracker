@@ -152,4 +152,5 @@ Two features were added on the `mid-course-project` branch:
 
 - [`docs/midcourse/mini-adr.md`](docs/midcourse/mini-adr.md) — design decisions for tags, due dates, and the overdue filter (why simpler/alternative approaches were rejected).
 - [`docs/module4/docker-security-log.md`](docs/module4/docker-security-log.md) — verification log for the Module 4 Docker setup (non-root user, slim base, no baked secrets).
+- [`docs/decisions/in-memory-task-storage.md`](docs/decisions/in-memory-task-storage.md) — decision note on using an in-memory dict for task storage (context, alternatives, trade-offs, open questions).
 - See also `docs/midcourse/user-stories.md`, `docs/midcourse/verification.md`, `docs/midcourse/prompt-log.md`, and `docs/midcourse/reflection.md` for the rest of the mid-course paper trail.
