@@ -31,6 +31,24 @@ class TaskCreate(BaseModel):
     @field_validator("title", mode="before")
     @classmethod
     def validate_title(cls, value: object) -> object:
+        """Strip and validate the ``title`` field before type coercion.
+
+        Runs in Pydantic "before" mode, so ``value`` may be any raw
+        input type (not yet coerced to ``str``).
+
+        Args:
+            value: The raw input for the ``title`` field.
+
+        Returns:
+            The stripped title string; unchanged if ``value`` is
+            ``None`` or not a ``str`` (in which case Pydantic's
+            built-in type validation handles it next, since ``title``
+            has no default and is not ``Optional`` here).
+
+        Raises:
+            ValueError: If the stripped title is empty, or longer than
+                200 characters.
+        """
         if value is None:
             return value
         if not isinstance(value, str):
@@ -58,6 +76,26 @@ class TaskUpdate(BaseModel):
     @field_validator("title", mode="before")
     @classmethod
     def validate_title(cls, value: object) -> object:
+        """Strip and validate an optional ``title`` update before type coercion.
+
+        Runs in Pydantic "before" mode. ``title`` is ``Optional`` on
+        ``TaskUpdate``, so ``None`` passes through unchanged here.
+        [VERIFY] That makes an explicit ``"title": null`` in a request
+        body indistinguishable from other None-ish inputs at this layer
+        — it is not rejected by this validator.
+
+        Args:
+            value: The raw input for the ``title`` field, or ``None``.
+
+        Returns:
+            The stripped title string; ``None`` unchanged; or the
+            original value unchanged if it is not a ``str`` (left for
+            Pydantic's built-in type validation).
+
+        Raises:
+            ValueError: If the stripped title is empty, or longer than
+                200 characters.
+        """
         if value is None:
             return value
         if not isinstance(value, str):
