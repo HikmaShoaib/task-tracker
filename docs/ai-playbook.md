@@ -23,6 +23,7 @@
 - What I verify: Every file Codex claims to have changed, and every factual claim about my repo (e.g., confirming repo visibility before accepting a risk grade).
 - How I verify it: Run `git status` before staging anything, read diffs/previews before approving, and cross-check AI's claims against the actual repo when something seems off.
 - What requires extra review: Anything AI marks as "Valid" or high-confidence in a security or governance context — I still run my own manual check before trusting the grade.
+- Before trusting any documentation or AI-generated claim about the app, I run the actual baseline myself first (start the app, hit /health, run the tests) — so I'm checking claims against real, current evidence, not assuming last week's state still holds.
 
 ## 5. What I am still figuring out
 

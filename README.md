@@ -1,3 +1,46 @@
+## Final Project
+Branch reviewed: final-project
+
+### What this submission demonstrates
+- Existing Task Tracker app still runs inside the intended course scope.
+- CI runs the pytest suite on push and/or pull request.
+- Docker image builds and runs with /health returning 200.
+- AI review, security, and ownership evidence is in docs/.
+
+### How to run locally
+```powershell
+python -m venv venv
+venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+Copy-Item .env.example .env
+uvicorn app.main:app --reload --port 8000
+```
+
+### How to run tests
+```powershell
+pytest -v
+```
+
+### How to run with Docker
+```powershell
+docker build -t task-tracker:dev .
+docker run --rm -p 8000:8000 --name tt-dev task-tracker:dev
+curl http://127.0.0.1:8000/health
+```
+
+### Evidence files
+- docs/release-evidence.md
+- docs/final-ai-review.md
+- docs/ai-playbook.md
+
+### AI assistance summary
+AI helped draft or review: CI verification, Docker verification, documentation claim-checking, security mini-review.
+I verified the work by: running the full pytest suite (26 passed), checking the live CI run on GitHub, building and running the Docker image locally, and confirming /health returned 200 in both local and Docker runs.
+One AI suggestion I rejected or corrected: Codex initially graded my public source code as Medium risk in the governance retrospective; I corrected this after confirming the repo was actually public on GitHub.
+
+---
+
+
 # Task Tracker API — Module 4
 
 A Task Tracker REST API built with Python and FastAPI as a Module 1–4 learning project. It exposes CRUD endpoints for tasks (create, list/filter, view, update, delete) plus a `/health` check, backed by an in-memory store — no database.
